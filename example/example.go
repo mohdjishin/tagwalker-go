@@ -32,10 +32,10 @@ func main() {
 		},
 	}
 
-	tagsExtractor := tagextractor.NewTagExtractor([]string{"custom", "testtag"})
+	tagsExtractor := tagextractor.NewExtractor([]string{"custom", "testtag"})
 
 	fmt.Println("Extracted Tags:")
 	for _, tag := range tagsExtractor.Extract(p) {
-		fmt.Printf("%-25s [%s] -> %v\n", tag.FieldPath, tag.TagKey, tag.TagValue)
+		fmt.Println(tag)
 	}
 }

@@ -27,15 +27,15 @@ func TestExtractCustomTags(t *testing.T) {
 		Nested:   Nested{InnerField: "value"},
 	}
 
-	expected := []tagextractor.CustomTag{
-		{FieldPath: "Name", TagKey: "custom", TagValue: []string{"name_tag"}},
-		{FieldPath: "Age", TagKey: "custom", TagValue: []string{"age_tag"}},
-		{FieldPath: "Location", TagKey: "custom", TagValue: []string{"location_tag"}},
-		{FieldPath: "Nested", TagKey: "custom", TagValue: []string{"nested_tag"}},
-		{FieldPath: "Nested.InnerField", TagKey: "custom", TagValue: []string{"inner_tag"}},
+	expected := []tagextractor.FieldTag{
+		{Path: "Name", Key: "custom", Values: []string{"name_tag"}},
+		{Path: "Age", Key: "custom", Values: []string{"age_tag"}},
+		{Path: "Location", Key: "custom", Values: []string{"location_tag"}},
+		{Path: "Nested", Key: "custom", Values: []string{"nested_tag"}},
+		{Path: "Nested.InnerField", Key: "custom", Values: []string{"inner_tag"}},
 	}
 
-	tagExtractror := tagextractor.NewTagExtractor([]string{"custom"})
+	tagExtractror := tagextractor.NewExtractor([]string{"custom"})
 	result := tagExtractror.Extract(sample)
 
 	if !reflect.DeepEqual(result, expected) {

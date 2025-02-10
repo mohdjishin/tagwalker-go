@@ -6,66 +6,90 @@ import (
 	"strings"
 )
 
-type CustomTag struct {
-	FieldPath string
-	TagKey    string
-	TagValue  []string
+// FieldTag represents a structured tag extracted from a struct field.
+type FieldTag struct {
+	Path   string
+	Key    string
+	Values []string
 }
 
-type TagExtractor struct {
+func (f FieldTag) String() string {
+	return fmt.Sprintf("Path: %-30s | Tag: %-15s | Values: %v", f.Path, f.Key, f.Values)
+}
+
+func (f FieldTag) TagValue() []string {
+	return f.Values
+}
+
+func (f FieldTag) TagKey() string {
+	return f.Key
+}
+
+func (f FieldTag) FieldPath() string {
+	return f.Path
+}
+
+// Extractor is responsible for extracting specific tags from struct fields.
+type Extractor struct {
 	tagKeys []string
 }
 
-func NewTagExtractor(tagKeys []string) *TagExtractor {
-	return &TagExtractor{tagKeys: tagKeys}
+// NewExtractor creates a new Extractor instance with the given tag keys.
+func NewExtractor(tagKeys []string) *Extractor {
+	return &Extractor{tagKeys: tagKeys}
 }
 
-func (te *TagExtractor) Extract(target interface{}) []CustomTag {
-	var tags []CustomTag
+// Extract retrieves all specified tags from the given target struct.
+func (e *Extractor) Extract(target interface{}) []FieldTag {
+	var extractedTags []FieldTag
 	rv := reflect.ValueOf(target)
 	rt := reflect.TypeOf(target)
+
+	// Dereference pointers
 	for rt.Kind() == reflect.Ptr {
 		if rv.IsNil() {
-			return tags
+			return extractedTags
 		}
 		rv = rv.Elem()
 		rt = rt.Elem()
 	}
 
+	// Ensure target is a struct
 	if rt.Kind() != reflect.Struct {
-		return tags
+		return extractedTags
 	}
 
-	type queueItem struct {
+	type fieldNode struct {
 		Type  reflect.Type
 		Value reflect.Value
 		Path  string
 	}
 
-	queue := []queueItem{{rt, rv, ""}}
+	queue := []fieldNode{{rt, rv, ""}}
 
 	for len(queue) > 0 {
-		item := queue[0]
+		node := queue[0]
 		queue = queue[1:]
 
-		if !item.Value.IsValid() {
+		if !node.Value.IsValid() {
 			continue
 		}
 
-		for i := 0; i < item.Type.NumField(); i++ {
-			field := item.Type.Field(i)
-			fieldValue := item.Value.Field(i)
+		for i := 0; i < node.Type.NumField(); i++ {
+			field := node.Type.Field(i)
+			fieldValue := node.Value.Field(i)
 			fieldPath := field.Name
-			if item.Path != "" {
-				fieldPath = item.Path + "." + field.Name
+			if node.Path != "" {
+				fieldPath = node.Path + "." + field.Name
 			}
 
-			for _, tagKey := range te.tagKeys {
+			// Extract specified tags
+			for _, tagKey := range e.tagKeys {
 				if tagValue := field.Tag.Get(tagKey); tagValue != "" {
-					tags = append(tags, CustomTag{
-						FieldPath: fieldPath,
-						TagKey:    tagKey,
-						TagValue:  strings.Split(strings.TrimSpace(tagValue), ","),
+					extractedTags = append(extractedTags, FieldTag{
+						Path:   fieldPath,
+						Key:    tagKey,
+						Values: strings.Split(strings.TrimSpace(tagValue), ","),
 					})
 				}
 			}
@@ -80,21 +104,21 @@ func (te *TagExtractor) Extract(target interface{}) []CustomTag {
 
 			switch ft.Kind() {
 			case reflect.Struct:
-				queue = append(queue, queueItem{ft, fv, fieldPath})
+				queue = append(queue, fieldNode{ft, fv, fieldPath})
 
 			case reflect.Slice, reflect.Array:
 				if elemType := ft.Elem(); elemType.Kind() == reflect.Struct {
 					for j := 0; j < fv.Len(); j++ {
-						queue = append(queue, queueItem{elemType, fv.Index(j), fmt.Sprintf("%s[%d]", fieldPath, j)})
+						queue = append(queue, fieldNode{elemType, fv.Index(j), fmt.Sprintf("%s[%d]", fieldPath, j)})
 					}
 				}
 
 			case reflect.Map:
 				for _, key := range fv.MapKeys() {
-					queue = append(queue, queueItem{ft.Elem(), fv.MapIndex(key), fmt.Sprintf("%s[%v]", fieldPath, key)})
+					queue = append(queue, fieldNode{ft.Elem(), fv.MapIndex(key), fmt.Sprintf("%s[%v]", fieldPath, key)})
 				}
 			}
 		}
 	}
-	return tags
+	return extractedTags
 }
