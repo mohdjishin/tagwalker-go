@@ -12,11 +12,18 @@ type CustomTag struct {
 	TagValue  []string
 }
 
-func ExtractCustomTags(target interface{}, tagKeys []string) []CustomTag {
+type TagExtractor struct {
+	tagKeys []string
+}
+
+func NewTagExtractor(tagKeys []string) *TagExtractor {
+	return &TagExtractor{tagKeys: tagKeys}
+}
+
+func (te *TagExtractor) Extract(target interface{}) []CustomTag {
 	var tags []CustomTag
 	rv := reflect.ValueOf(target)
 	rt := reflect.TypeOf(target)
-
 	for rt.Kind() == reflect.Ptr {
 		if rv.IsNil() {
 			return tags
@@ -29,31 +36,31 @@ func ExtractCustomTags(target interface{}, tagKeys []string) []CustomTag {
 		return tags
 	}
 
-	queue := []struct {
+	type queueItem struct {
 		Type  reflect.Type
 		Value reflect.Value
 		Path  string
-	}{{rt, rv, ""}}
+	}
+
+	queue := []queueItem{{rt, rv, ""}}
 
 	for len(queue) > 0 {
-		current := queue[0]
+		item := queue[0]
 		queue = queue[1:]
 
-		if !current.Value.IsValid() {
+		if !item.Value.IsValid() {
 			continue
 		}
 
-		for i := 0; i < current.Type.NumField(); i++ {
-			field := current.Type.Field(i)
-			fieldValue := current.Value.Field(i)
+		for i := 0; i < item.Type.NumField(); i++ {
+			field := item.Type.Field(i)
+			fieldValue := item.Value.Field(i)
 			fieldPath := field.Name
-
-			if current.Path != "" {
-				fieldPath = current.Path + "." + field.Name
+			if item.Path != "" {
+				fieldPath = item.Path + "." + field.Name
 			}
 
-			// Extract multiple tags
-			for _, tagKey := range tagKeys {
+			for _, tagKey := range te.tagKeys {
 				if tagValue := field.Tag.Get(tagKey); tagValue != "" {
 					tags = append(tags, CustomTag{
 						FieldPath: fieldPath,
@@ -63,10 +70,7 @@ func ExtractCustomTags(target interface{}, tagKeys []string) []CustomTag {
 				}
 			}
 
-			// Handle nested structures
-			ft := field.Type
-			fv := fieldValue
-
+			ft, fv := field.Type, fieldValue
 			for ft.Kind() == reflect.Ptr {
 				ft = ft.Elem()
 				if fv.IsValid() && !fv.IsNil() {
@@ -76,35 +80,18 @@ func ExtractCustomTags(target interface{}, tagKeys []string) []CustomTag {
 
 			switch ft.Kind() {
 			case reflect.Struct:
-				queue = append(queue, struct {
-					Type  reflect.Type
-					Value reflect.Value
-					Path  string
-				}{ft, fv, fieldPath})
+				queue = append(queue, queueItem{ft, fv, fieldPath})
 
 			case reflect.Slice, reflect.Array:
-				elemType := ft.Elem()
-				for elemType.Kind() == reflect.Ptr {
-					elemType = elemType.Elem()
-				}
-				if elemType.Kind() == reflect.Struct {
+				if elemType := ft.Elem(); elemType.Kind() == reflect.Struct {
 					for j := 0; j < fv.Len(); j++ {
-						queue = append(queue, struct {
-							Type  reflect.Type
-							Value reflect.Value
-							Path  string
-						}{elemType, fv.Index(j), fmt.Sprintf("%s[%d]", fieldPath, j)})
+						queue = append(queue, queueItem{elemType, fv.Index(j), fmt.Sprintf("%s[%d]", fieldPath, j)})
 					}
 				}
 
 			case reflect.Map:
 				for _, key := range fv.MapKeys() {
-					value := fv.MapIndex(key)
-					queue = append(queue, struct {
-						Type  reflect.Type
-						Value reflect.Value
-						Path  string
-					}{ft.Elem(), value, fmt.Sprintf("%s[%v]", fieldPath, key)})
+					queue = append(queue, queueItem{ft.Elem(), fv.MapIndex(key), fmt.Sprintf("%s[%v]", fieldPath, key)})
 				}
 			}
 		}

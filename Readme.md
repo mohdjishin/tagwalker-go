@@ -54,11 +54,11 @@ func main() {
 		},
 	}
 
-	tags := tagextractor.ExtractCustomTags(p, []string{"custom", "testtag"})
+	tagsExtractor := tagextractor.NewTagExtractor([]string{"custom", "testtag"})
 
 	fmt.Println("Extracted Tags:")
-	for _, tag := range tags {
-		fmt.Printf("%-20s [%s] -> %v\n", tag.FieldPath, tag.TagKey, tag.TagValue)
+	for _, tag := range tagsExtractor.Extract(p) {
+		fmt.Printf("%-25s [%s] -> %v\n", tag.FieldPath, tag.TagKey, tag.TagValue)
 	}
 }
 ```

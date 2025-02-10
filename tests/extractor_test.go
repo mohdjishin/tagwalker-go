@@ -35,7 +35,8 @@ func TestExtractCustomTags(t *testing.T) {
 		{FieldPath: "Nested.InnerField", TagKey: "custom", TagValue: []string{"inner_tag"}},
 	}
 
-	result := tagextractor.ExtractCustomTags(sample, []string{"custom"})
+	tagExtractror := tagextractor.NewTagExtractor([]string{"custom"})
+	result := tagExtractror.Extract(sample)
 
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Expected %v, but got %v", expected, result)
