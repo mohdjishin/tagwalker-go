@@ -54,12 +54,13 @@ func main() {
 		},
 	}
 
-	tagsExtractor := tagextractor.NewTagExtractor([]string{"custom", "testtag"})
+	tagsExtractor := tagextractor.NewExtractor([]string{"custom", "testtag"})
 
 	fmt.Println("Extracted Tags:")
 	for _, tag := range tagsExtractor.Extract(p) {
-		fmt.Printf("%-25s [%s] -> %v\n", tag.FieldPath, tag.TagKey, tag.TagValue)
+		fmt.Println(tag)
 	}
+
 }
 ```
 
@@ -68,16 +69,22 @@ func main() {
 
 ```bash
 Extracted Tags:
-Name                 [custom] -> [name_tag test_tag]
-Name                 [testtag] -> [test_Name]
-Age                  [custom] -> [age_tag]
-Age                  [testtag] -> [test_Age]
-Address              [custom] -> [addr_tag]
-Address              [testtag] -> [test_Address]
-Address.City         [custom] -> [city_tag location_tag]
-Address.City         [testtag] -> [test_City]
-Data                 [custom] -> [data_tag]
-Data                 [testtag] -> [test_Data]
-Data[record1].ID     [custom] -> [id_tag]
-Data[record1].ID     [testtag] -> [test_ID]
+Path: Name                           | Tag: custom          | Values: [name_tag test_tag]
+Path: Name                           | Tag: testtag         | Values: [test_Name]
+Path: Age                            | Tag: custom          | Values: [age_tag]
+Path: Age                            | Tag: testtag         | Values: [test_Age]
+Path: Address                        | Tag: custom          | Values: [addr_tag]
+Path: Address                        | Tag: testtag         | Values: [test_Address]
+Path: Scores                         | Tag: custom          | Values: [scores_tag]
+Path: Scores                         | Tag: testtag         | Values: [test_Scores]
+Path: Friends                        | Tag: custom          | Values: [friends_tag]
+Path: Friends                        | Tag: testtag         | Values: [test_Friends]
+Path: Data                           | Tag: custom          | Values: [data_tag]
+Path: Data                           | Tag: testtag         | Values: [test_Data]
+Path: Address.City                   | Tag: custom          | Values: [city_tag location_tag]
+Path: Address.City                   | Tag: testtag         | Values: [test_City]
+Path: Address.Country                | Tag: custom          | Values: [country_tag location_tag]
+Path: Address.Country                | Tag: testtag         | Values: [test_Country]
+Path: Data[record1].ID               | Tag: custom          | Values: [id_tag]
+Path: Data[record1].ID               | Tag: testtag         | Values: [test_ID]
 ```
