@@ -6,15 +6,18 @@ import (
 	"strings"
 )
 
-// FieldTag represents a structured tag extracted from a struct field.
 type FieldTag struct {
 	Path   string
 	Key    string
 	Values []string
+	Value  interface{}
 }
 
 func (f FieldTag) String() string {
-	return fmt.Sprintf("Path: %-30s | Tag: %-15s | Values: %v", f.Path, f.Key, f.Values)
+	return fmt.Sprintf(
+		"Path: %-35s | Tag: %-12s | Values: %-30s | Value: %v",
+		f.Path, f.Key, strings.Join(f.Values, ", "), f.Value,
+	)
 }
 
 func (f FieldTag) TagValue() []string {
@@ -29,23 +32,19 @@ func (f FieldTag) FieldPath() string {
 	return f.Path
 }
 
-// Extractor is responsible for extracting specific tags from struct fields.
 type Extractor struct {
 	tagKeys []string
 }
 
-// NewExtractor creates a new Extractor instance with the given tag keys.
 func NewExtractor(tagKeys []string) *Extractor {
 	return &Extractor{tagKeys: tagKeys}
 }
 
-// Extract retrieves all specified tags from the given target struct.
 func (e *Extractor) Extract(target interface{}) []FieldTag {
 	var extractedTags []FieldTag
 	rv := reflect.ValueOf(target)
 	rt := reflect.TypeOf(target)
 
-	// Dereference pointers
 	for rt.Kind() == reflect.Ptr {
 		if rv.IsNil() {
 			return extractedTags
@@ -54,7 +53,6 @@ func (e *Extractor) Extract(target interface{}) []FieldTag {
 		rt = rt.Elem()
 	}
 
-	// Ensure target is a struct
 	if rt.Kind() != reflect.Struct {
 		return extractedTags
 	}
@@ -83,13 +81,17 @@ func (e *Extractor) Extract(target interface{}) []FieldTag {
 				fieldPath = node.Path + "." + field.Name
 			}
 
-			// Extract specified tags
+			if field.PkgPath != "" {
+				continue
+			}
+
 			for _, tagKey := range e.tagKeys {
 				if tagValue := field.Tag.Get(tagKey); tagValue != "" {
 					extractedTags = append(extractedTags, FieldTag{
 						Path:   fieldPath,
 						Key:    tagKey,
 						Values: strings.Split(strings.TrimSpace(tagValue), ","),
+						Value:  fieldValue.Interface(),
 					})
 				}
 			}

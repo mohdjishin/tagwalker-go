@@ -45,8 +45,9 @@ func main() {
 		} `custom:"data_tag" testtag:"test_Data"`
 	}
 
+	location := "London"
 	p := Person{
-		Address: &Address{City: "London"},
+		Address: &Address{City: "London", Country: &location},
 		Data: map[string]struct {
 			ID float64 `custom:"id_tag" testtag:"test_ID"`
 		}{
@@ -60,7 +61,6 @@ func main() {
 	for _, tag := range tagsExtractor.Extract(p) {
 		fmt.Println(tag)
 	}
-
 }
 ```
 
